@@ -31,6 +31,8 @@ Support for PBS is provided via the PbsJob class. If you want you could create o
 @author: Toon Willems (Ghent University)
 @author: Kenneth Hoste (Ghent University)
 @author: Stijn De Weirdt (Ghent University)
+
+Some changes to add support for other Batch Queue Systems (BQS) - Jordi Blasco (NeSI)
 """
 import math
 import os
@@ -47,9 +49,21 @@ from easybuild.tools.filetools import find_easyconfigs
 from easybuild.tools.jenkins import aggregate_xml_in_dirs
 from easybuild.tools.module_generator import det_full_module_name
 from easybuild.tools.module_naming_scheme.utilities import det_full_ec_version
-from easybuild.tools.pbs_job import PbsJob, connect_to_server, disconnect_from_server, get_ppn
 from easybuild.tools.repository import init_repository
 from vsc import fancylogger
+
+if os.getenv('EASYBUILDBQS'):
+    bqs=os.getenv('EASYBUILDBQS')
+else:
+    bqs=pbs
+
+if bqs == pbs:
+    from easybuild.tools.pbs_job import BatchJob, connect_to_server, disconnect_from_server, get_ppn
+elif bqs == slurm:
+    from easybuild.tools.slurm_job import BatchJob, connect_to_server, disconnect_from_server, get_ppn
+else:
+    print "No Batch Queue System have been setup"
+
 
 _log = fancylogger.getLogger('parallelbuild', fname=False)
 
@@ -169,7 +183,7 @@ def create_job(build_command, easyconfig, output_dir=None, conn=None, ppn=None):
         previous_time = buildstats[-1]['build_time']
         resources['hours'] = int(math.ceil(previous_time * 2 / 60))
 
-    job = PbsJob(command, name, easybuild_vars, resources=resources, conn=conn, ppn=ppn)
+    job = BatchJob(command, name, easybuild_vars, resources=resources, conn=conn, ppn=ppn)
     job.module = det_full_module_name(easyconfig['ec'])
 
     return job
